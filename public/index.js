@@ -59,6 +59,8 @@ function onContentLoaded() {
 	navigator.usb.getDevices()
 		.then(async devices => {
 			console.log('existing paired device', devices)
+			if(devices.length === 0) { return }
+
 			const [ device ] = devices
 
 			await initializeDevice(device)
