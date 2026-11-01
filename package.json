@@ -1,0 +1,24 @@
+{
+  "name": "@johntalton/ouroboros",
+  "version": "1.0.0",
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "lint": "biome check"
+  },
+  "dependencies": {
+    "@johntalton/bitsmush": "^1.0.6",
+    "@johntalton/ftdi": "../ftdi",
+    "@johntalton/http-util": "^7.3.0",
+    "@johntalton/wiz5500": "../wiz5500"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.6.2",
+    "@johntalton/and-other-delights": "../and-other-delights",
+    "@types/w3c-web-usb": "^1.0.14",
+    "c8": "^12.0.0"
+  },
+  "repository": {
+    "url": "git+https://github.com/johntalton/ouroboros.git"
+  }
+}

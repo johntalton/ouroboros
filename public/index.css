@@ -1,0 +1,21 @@
+
+* {
+	box-sizing: border-box;
+	padding: 0;
+	margin: 0;
+}
+
+*:not(:where(html, body, small)) {
+	font-family: inherit;
+	font-size: inherit;
+}
+
+html {
+	height: 100vh;
+	font-size: 100%;
+}
+
+body {
+	min-height: 100vh;
+	height: 100%;
+}

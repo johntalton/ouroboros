@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover">
+		<meta name="view-transition" content="same-origin" />
+		<meta content="light dark" name="color-scheme">
+
+		<title>Ouroboros</title>
+		<meta name="description" content="Hosting Web Server in the Browser">
+
+		<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+		<!-- <link rel="manifest" href="manifest.json" /> -->
+		<script type="importmap">
+			{
+				"imports": {
+          "@johntalton/bitsmush": "/node_modules/@johntalton/bitsmush/lib/bitsmush.js",
+          "@johntalton/and-other-delights": "/node_modules/@johntalton/and-other-delights/lib/index.js",
+					"@johntalton/ftdi": "/node_modules/@johntalton/ftdi/lib/index.js",
+          "@johntalton/ftdi/spi": "/node_modules/@johntalton/ftdi/lib/spi/index.js",
+          "@johntalton/wiz5500": "/node_modules/@johntalton/wiz5500/src/index.js",
+          "@johntalton/http-util": "/node_modules/@johntalton/http-util/src/index.js"
+    		}
+			}
+		</script>
+		<script src="./index.js" type="module" async defer crossorigin="anonymous"></script>
+		<link rel="stylesheet" type="text/css" href="./index.css" />
+	</head>
+	<body >
+    <header>
+      <h1>Ouroboros</h1>
+    </header>
+    <main>
+      <button name="PairUSB" type="button">Pair USB</button>
+    </main>
+    <footer>
+    </footer>
+  </body>
+</html>
