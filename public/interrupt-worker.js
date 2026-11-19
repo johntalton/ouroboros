@@ -136,19 +136,19 @@ async function setup(device) {
 		const ftdi = await FTDIDevice.from(device)
 
 		await ftdi.setBitMode(BIT_MODE.RESET)
-		await ftdi.setBitMode(BIT_MODE.MPSSE)
+		// await ftdi.setBitMode(BIT_MODE.MPSSE)
 
 
-		// await ftdi.mpsse.setGpioHigh(0b0001_0100, 0b0001_1111)
+		// await ftdi.mpsse.setGpioHigh(0b0001_0100, 0b0001_1111) // red
 		// await delayMs(1000)
 
-		// await ftdi.mpsse.setGpioHigh(0b0001_0001, 0b0001_1111)
+		// await ftdi.mpsse.setGpioHigh(0b0001_0001, 0b0001_1111) // green
 		// await delayMs(1000)
 
-		// await ftdi.mpsse.setGpioHigh(0b0000_0101, 0b0001_1111)
+		// await ftdi.mpsse.setGpioHigh(0b0000_0101, 0b0001_1111) // blue
 		// await delayMs(1000)
 
-		// await ftdi.mpsse.setGpioHigh(0b0001_0101, 0b0001_1111)
+		// await ftdi.mpsse.setGpioHigh(0b0001_0101, 0b0001_1111) // off
 
 
 		// const chipInfo = Util.chip(device.deviceVersionMajor, device.deviceVersionMinor)
@@ -185,9 +185,8 @@ async function setup(device) {
 			const version = await wiz.readChipVersion()
 			console.log('Wiz Version', version)
 			if(version !== 0x04) {
-				throw new Error('version missmatch')
+				throw new Error('version miss-match')
 			}
-
 
 			await wiz.writeSourceHardwareAddress(deviceConfig.wiz5500.MAC)
 			await wiz.writeGatewayAddress({ dotQuad: deviceConfig.wiz5500.gateway })
@@ -224,6 +223,7 @@ async function setup(device) {
 
 
 			for(const socketCache of sockets) {
+				// if(!isSocketNumber(socketCache.socketNumber)) { continue }
 
 				await wiz.writeSocketSocketInterrupt(socketCache.socketNumber, {
 					sendOk: true,
@@ -287,6 +287,7 @@ async function setup(device) {
 async function pollInterruptState() {
 	if(deviceRegistry.size === 0) { return }
 
+
 	for await (const [ key, futureRegistration ] of deviceRegistry) {
 		const registration = await futureRegistration
 		if(registration === undefined) {
@@ -295,24 +296,32 @@ async function pollInterruptState() {
 		}
 		const interrupts = await registration.wiz.readSocketInterrupt()
 		// console.log(key, 'interrupts', interrupts)
+		// await registration.ftdi.mpsse.setGpioHigh(0b0000_0101, 0b0001_1111) // blue
 
 
 		for(let iindex = 0; iindex < interrupts.length; iindex +=1) {
+			// if(!isSocketNumber(iindex)) { continue }
+
 			const interrupt = interrupts[iindex]
 			if(interrupt === false) { continue }
 
 			console.log('has interrupt socketNumber', iindex)
+			// const socketMode = await wiz.readSocketMode(iindex)
 
 			const socketInterrupts = await registration.wiz.readSocketSocketInterrupt(iindex)
 			console.log(socketInterrupts)
 
 			if(socketInterrupts.connect) {
-				const socketStatus = await registration.wiz.readSocketStatus(iindex)
+				await registration.ftdi.mpsse.setGpioHigh(0b0001_0100, 0b0001_1111) // red
+
+				// const socketDestHWAddress = await wiz.readSocketDestinationHardwareAddress(iindex)
+				// const socketStatus = await registration.wiz.readSocketStatus(iindex)
 				const peerIP = await registration.wiz.readSocketDestinationIPAddress(iindex)
 				const peerPort = await registration.wiz.readSocketDestinationPort(iindex)
 
 				const pair = new Socket(registration.wiz, iindex)
 				postMessage({
+					type: 'connect',
 					socketNumber: iindex,
 					readable: pair.readable,
 					writable: pair.writable,
@@ -320,16 +329,69 @@ async function pollInterruptState() {
 						ip: peerIP,
 						port: peerPort
 					}
-				}, [ pair.readable, pair.writable ])
+				}, { transfer: [ pair.readable, pair.writable ] })
+
+				await registration.wiz.writeSocketSocketInterrupt(iindex, {
+					connect: true
+				})
+			}
+
+			if(socketInterrupts.sendOk) {
+				await registration.ftdi.mpsse.setGpioHigh(0b0001_0001, 0b0001_1111) // green
+
+				// const freeSize = await registration.wiz.readSocketTXFreeSize(iindex)
+				// const pointer = await registration.wiz.readSocketTXWritePointer(iindex)
+				// const deviceReadPointer = await registration.wiz.readSocketTXReadPointer(iindex)
+				// console.log('freeSize', freeSize)
+				// console.log('pointer', pointer)
+				// console.log('device pointer', deviceReadPointer)
+
+				// await delayMs(1000)
+				// setTimeout(async () => {
+
+					const socketStatus = await registration.wiz.readSocketStatus(iindex)
+					const command = await registration.wiz.readSocketCommand(iindex)
+
+					console.log('close write socket', iindex, socketStatus, command)
+					await registration.wiz.writeSocketCommand(iindex, SOCKET_COMMANDS.DISCONNECT)
+					// const status = await registration.wiz.readSocketStatus(iindex)
+					// console.log('status', status)
+
+					await delayMs(100)
+					await registration.wiz.writeSocketCommand(iindex, SOCKET_COMMANDS.CLOSE)
+					// const status2 = await registration.wiz.readSocketStatus(iindex)
+					// console.log('status2 ', status2)
+
+				// }, 3000)
+
+				await registration.wiz.writeSocketSocketInterrupt(iindex, {
+					sendOk: true,
+				})
+			}
+
+			if(socketInterrupts.disconnect) {
+				console.log('handle disconnect')
+
+				// const command = await registration.wiz.readSocketCommand(iindex)
+				// console.log(command)
+				await registration.wiz.writeSocketCommand(iindex, SOCKET_COMMANDS.OPEN)
+				await registration.wiz.writeSocketCommand(iindex, SOCKET_COMMANDS.LISTEN)
+
+				await registration.ftdi.mpsse.setGpioHigh(0b0001_0101, 0b0001_1111) // off
+				await registration.wiz.writeSocketSocketInterrupt(iindex, {
+					disconnect: true,
+				})
 			}
 
 			await registration.wiz.writeSocketSocketInterrupt(iindex, {
-				sendOk: true,
-				timeout: true,
+			// 	sendOk: true,
+			// 	timeout: true,
 				receive: true,
-				disconnect: true,
-				connect: true
+			// 	disconnect: true,
+			// 	connect: true
 			})
+
+
 		}
 
 

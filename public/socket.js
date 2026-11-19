@@ -34,15 +34,21 @@ export async function receive(wiz, socketNumber) {
 export async function transmit(wiz, socketNumber, buffer) {
 	const freeSize = await wiz.readSocketTXFreeSize(socketNumber)
 	const pointer = await wiz.readSocketTXWritePointer(socketNumber)
+	// const deviceReadPointer = await wiz.readSocketTXReadPointer(socketNumber)
 
-	console.log('freeSize', freeSize)
-	console.log('write size', buffer.byteLength)
+	// console.log('freeSize', freeSize)
+	// console.log('pointer', pointer)
+	// console.log('device pointer', deviceReadPointer)
+	// console.log('write size', buffer.byteLength)
 
 	await wiz.writeSocketTX(socketNumber, pointer, buffer)
 
 	const updatedPointer = pointer + buffer.byteLength
 
 	await wiz.writeSocketTXWritePointer(socketNumber, updatedPointer)
+
+	// const status = await wiz.readSocketCommand(socketNumber)
+	// console.log('command pri to send', status)
 	await wiz.writeSocketCommand(socketNumber, SOCKET_COMMANDS.SEND)
 }
 
@@ -100,21 +106,22 @@ export class SocketWriter extends WritableStream {
 			start(controller) {},
 
 			async write(chunk, controller) {
+				// console.log('transmit', chunk)
 				await transmit(wiz, socketNumber, chunk)
 			},
 
 			abort(reason) {},
 
 			async close() {
-				console.log('close write socket', socketNumber)
-				const status = await wiz.readSocketStatus(socketNumber)
-				console.log('status', status)
+				console.log('Socket: close write', socketNumber)
+				// const status = await wiz.readSocketStatus(socketNumber)
+				// console.log('status', status)
 				await wiz.writeSocketCommand(socketNumber, SOCKET_COMMANDS.DISCONNECT)
-				await wiz.writeSocketCommand(socketNumber, SOCKET_COMMANDS.CLOSE)
-				const command = await wiz.readSocketCommand(socketNumber)
-				console.log(command)
-				await wiz.writeSocketCommand(socketNumber, SOCKET_COMMANDS.OPEN)
-				await wiz.writeSocketCommand(socketNumber, SOCKET_COMMANDS.LISTEN)
+				// await wiz.writeSocketCommand(socketNumber, SOCKET_COMMANDS.CLOSE)
+				// const command = await wiz.readSocketCommand(socketNumber)
+				// console.log(command)
+				// await wiz.writeSocketCommand(socketNumber, SOCKET_COMMANDS.OPEN)
+				// await wiz.writeSocketCommand(socketNumber, SOCKET_COMMANDS.LISTEN)
 
 			}
 		}, strategy)
