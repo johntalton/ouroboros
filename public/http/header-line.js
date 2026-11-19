@@ -50,7 +50,7 @@ export class HeaderLine {
 				continue
 			}
 
-			if(lastNonOWS <= firstNonOWS) { throw new Error('empty header value (tail)') }
+			if(lastNonOWS < firstNonOWS) { throw new Error('empty header value (tail)') }
 			break
 		}
 

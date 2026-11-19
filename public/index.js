@@ -16,11 +16,20 @@ import {
 	AcceptLanguage,
 	Accept
 } from '@johntalton/http-util/headers'
+import { HTTPMessage } from './http/http-message.js'
+import { HTTPBody } from './http/http-body.js'
+import { HTTPHeaders } from './http/http-headers.js'
+import { HTTPResponse } from './http/http-response.js'
+
 
 export const FT232H_USB_FILTER = {
 	vendorId: DEFAULT_FTDI_VENDOR_ID,
 	productId: DEFAULT_FT232H_PRODUCT_ID
 }
+
+
+export const delayMs = (ms) => new Promise(resolve => setTimeout(resolve, ms))
+
 
 /**
  * @param {number} protocol
@@ -54,22 +63,22 @@ export function socketStatusToString(status) {
 	return 'unknown'
 }
 
-export function temporalIMFFixDate(instant) {
-	return new Intl.DateTimeFormat('en-US', {
-		timeZone: 'UTC',
-		weekday: 'short',
-		day: '2-digit',
-		month: 'short',
-		year: 'numeric',
-		hour: '2-digit',
-		minute: '2-digit',
-		second: '2-digit',
-		hour12: false
-	})
-		.format(instant)
-		.replace(/(?:\d,)/, '')
-		+ ' GMT'
-}
+// export function temporalIMFFixDate(instant) {
+// 	return new Intl.DateTimeFormat('en-US', {
+// 		timeZone: 'UTC',
+// 		weekday: 'short',
+// 		day: '2-digit',
+// 		month: 'short',
+// 		year: 'numeric',
+// 		hour: '2-digit',
+// 		minute: '2-digit',
+// 		second: '2-digit',
+// 		hour12: false
+// 	})
+// 		.format(instant)
+// 		.replace(/(?:\d,)/, '')
+// 		+ ' GMT'
+// }
 
 
 /** @type {{ usb: USBDevice|undefined, ftdi: FTDIDevice|undefined, wiz: Wiz5500|undefined }} */
@@ -84,11 +93,12 @@ const config = {
  * @param {USBDevice} device
  */
 async function initializeDevice(device) {
+
+
+	return
 	await device.open()
 	// console.log('device open')
-
 	dumpUSBDevice(device)
-
 
 	const driver = await FTDIDevice.from(device)
 	await driver.setBitMode(BIT_MODE.MPSSE)
@@ -99,7 +109,7 @@ async function initializeDevice(device) {
 		return
 	}
 
-	const spi = new FTDISPIBus(driver)
+	const spi = new FTDISPIBus(driver, { cs: 0 })
 	const wiz = new Wiz5500(spi)
 	// console.log('wiz created')
 
@@ -248,27 +258,58 @@ async function socketInfo(wiz, socketNumber) {
 }
 
 function onContentLoaded() {
+	const interruptWorker = new Worker('./interrupt-worker.js', { name: 'Interrupt', type: 'module' })
+	interruptWorker.onerror = event => {
+		console.warn('Worker Error', event.error)
+	}
+	// interruptWorker.postMessage({
+	// 	type: 'Go',
+	// })
+	interruptWorker.onmessage = event => {
+		console.log('Event from worker', event)
+		const { readable, writable } = event.data
+
+		const signal = AbortSignal.timeout(10 * 1000)
+
+		HTTPMessage.message({
+			readable, writable
+		}, { signal })
+			.then(async message => {
+				console.log('Message', message)
+				const response = new HTTPResponse(message.stream.writable)
+				const headers = new HTTPHeaders(message.headers)
+				const body = new HTTPBody(message.stream.readable)
+				const text = await body.text()
+				console.log('Body', text)
+
+				await response.respond(200, new Map())
+				await response.end('<html><body>Here Again</body></html>')
+			})
+			.catch(e => console.warn('error im http message', e))
+	}
+
+
 	//
-	navigator.usb.addEventListener('connect', async event => {
-		console.log('USB Device connect', event)
+	// navigator.usb.addEventListener('connect', async event => {
+	// 	console.log('USB Device connect', event)
 
-		const { device } = event
-		await initializeDevice(device)
-	})
-	navigator.usb.addEventListener('disconnect', event => {
-		console.log('USB Device disconnect', event)
-	})
+	// 	const { device } = event
+	// 	await initializeDevice(device)
+	// })
+	// navigator.usb.addEventListener('disconnect', event => {
+	// 	console.log('USB Device disconnect', event)
+	// })
 
-	navigator.usb.getDevices()
-		.then(async devices => {
-			console.log('existing paired device', devices)
-			if(devices.length === 0) { return }
+	// navigator.usb.getDevices()
+	// 	.then(async devices => {
+	// 		console.log('existing paired device', devices)
+	// 		if(devices.length === 0) { return }
 
-			const [ device ] = devices
+	// 		const [ device ] = devices
 
-			await initializeDevice(device)
-		})
-		.catch(e => console.warn('initialize error', e))
+	// 		await initializeDevice(device)
+	// 	})
+	// 	.catch(e => console.warn('initialize error', e))
 
 	const pairURBButton = document.querySelector('button[name="PairUSB"]')
 	pairURBButton?.addEventListener('click', event => {

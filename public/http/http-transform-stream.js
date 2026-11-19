@@ -2,35 +2,16 @@ import {
 	CR,
 	HTAB,
 	isDigit,
+	isNonSharedArrayBuffer,
 	isTokenChar,
 	isVChar,
 	LF,
 	SPACE
 } from './http-util.js'
 
-/** @typedef {typeof STATE[keyof typeof STATE]} State */
+/** @import { HTTPMessageBufferSource } from './defs.js' */
 
-/** @typedef {typeof TYPE[keyof typeof TYPE]} Type */
-
-/** @typedef {ArrayBufferLike|ArrayBufferView} HTTPTransformStreamInput */
-/** @typedef {{ type: Type, value?: undefined|Uint8Array}} HTTPTransformStreamOutput */
-
-/**
- * @typedef {Object} HTTPTransformStreamOptions
- * @property {QueuingStrategy<HTTPTransformStreamInput>} [writableStrategy]
- * @property {QueuingStrategy<HTTPTransformStreamOutput>} [readableStrategy]
- * @property {AbortSignal} [signal]
- */
-
-export const MAX_METHOD_LENGTH = 16
-export const MAX_URI_LENGTH = 1024 * 8
-export const MAX_VERSION_LENGTH = 8
-export const MAX_HEADER_LINE_LENGTH = 1024 * 8
-
-export const MAX_HTTP_MESSAGE_LENGTH = 1024 * 16
-export const MAX_HEADER_LINE_COUNT = 100
-
-const STATE = /** @type {const} */ ({
+export const STATE = /** @type {const} */ ({
 	METHOD: 0,
 	URI: 1,
 	VERSION: 2,
@@ -50,7 +31,67 @@ export const TYPE = /** @type {const} */ ({
 	FLUSH: 'FLUSH'
 })
 
-const HTTP_CHARS = [ 'H', 'T', 'P', '/', '.' ].map(c => c.codePointAt(0))
+
+/** @typedef {typeof STATE[keyof typeof STATE]} State */
+
+/** @typedef {typeof TYPE[keyof typeof TYPE]} Type */
+
+/** @typedef {HTTPMessageBufferSource} HTTPTransformStreamInput */
+
+/**
+ * @typedef {Object} HTTPTransformStreamMethodOutput
+ * @property {'METHOD'} type
+ * @property {Uint8Array} value
+ */
+/**
+ * @typedef {Object} HTTPTransformStreamURIOutput
+ * @property {'URI'} type
+ * @property {Uint8Array} value
+ */
+/**
+ * @typedef {Object} HTTPTransformStreamVersionOutput
+ * @property {'VERSION'} type
+ * @property {Uint8Array} value
+ */
+/**
+ * @typedef {Object} HTTPTransformStreamHeaderOutput
+ * @property {'HEADER'} type
+ * @property {Uint8Array} value
+ */
+/**
+ * @typedef {Object} HTTPTransformStreamEOHOutput
+ * @property {'END_OF_HEADER'} type
+ */
+/**
+ * @typedef {Object} HTTPTransformStreamBodyOutput
+ * @property {'BODY'} type
+ * @property {Uint8Array} value
+ */
+/**
+ * @typedef {Object} HTTPTransformStreamFlushOutput
+ * @property {'FLUSH'} type
+ * @property {Uint8Array} value
+ */
+
+/** @typedef {HTTPTransformStreamMethodOutput|HTTPTransformStreamURIOutput|HTTPTransformStreamVersionOutput|HTTPTransformStreamHeaderOutput|HTTPTransformStreamEOHOutput|HTTPTransformStreamBodyOutput|HTTPTransformStreamFlushOutput} HTTPTransformStreamOutput */
+
+
+/**
+ * @typedef {Object} HTTPTransformStreamOptions
+ * @property {QueuingStrategy<HTTPTransformStreamInput>} [writableStrategy]
+ * @property {QueuingStrategy<HTTPTransformStreamOutput>} [readableStrategy]
+ * @property {AbortSignal} [signal]
+ */
+
+export const MAX_METHOD_LENGTH = 16
+export const MAX_URI_LENGTH = 1024 * 8
+export const MAX_VERSION_LENGTH = 8
+export const MAX_HEADER_LINE_LENGTH = 1024 * 8
+
+export const MAX_HTTP_MESSAGE_LENGTH = 1024 * 16
+export const MAX_HEADER_LINE_COUNT = 100
+
+export const HTTP_CHARS = [ 'H', 'T', 'P', '/', '.' ].map(c => c.codePointAt(0))
 
 /**
  * @param {number} c
@@ -65,15 +106,6 @@ export function isValidHTTPVersionChar(c) {
  */
 export function isHeaderChar(c) {
 	return isTokenChar(c) || isVChar(c) || (c === SPACE) || (c === HTAB)
-}
-
-/**
- * @param {Uint8Array} buffer
- * @returns {buffer is Uint8Array<ArrayBuffer>}
- */
-export function isNonSharedArrayBuffer(buffer) {
-	if(typeof SharedArrayBuffer === 'undefined') { return true }
-	return !(buffer.buffer instanceof SharedArrayBuffer)
 }
 
 /**
@@ -286,6 +318,8 @@ export class HTTPTransformStream extends TransformStream {
 			},
 
 			async flush(controller) {
+				console.log('transform flush')
+
 				if(signal !== undefined && abortHandler !== undefined) {
 					signal.removeEventListener('abort', abortHandler)
 				}

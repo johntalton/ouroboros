@@ -1,0 +1,27 @@
+{
+  "devices": [
+		{
+			"name": "WebServer",
+			"usb": {
+				"serialNumber": "FT80SUO9"
+			},
+			"spi": { "cs": 0, "mode": 0 },
+			"wiz5500": {
+				"ip": "10.0.0.20",
+				"subnet": "255.0.0.0",
+				"MAC": "CA:FE:00:00:F0:0D",
+				"gateway": "0.0.0.0",
+
+				"mode": {},
+
+				"sockets": [
+					{
+						"socketNumber": 1,
+						"mode": "TCP/LISTEN",
+						"port": 8888
+					}
+				]
+			}
+		}
+	]
+}
