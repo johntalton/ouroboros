@@ -127,6 +127,7 @@ export class HTTPResponse {
 			if(typeof body === 'string') {
 				const encoder = new TextEncoder()
 				await this.#writer.write(encoder.encode(body))
+        await this.#writer.close()
 			}
 			else if(body instanceof ReadableStream) {
         // await this.#writer.close()
@@ -135,12 +136,12 @@ export class HTTPResponse {
 			}
 			else if(body instanceof ArrayBuffer) {
 				await this.#writer.write(body)
+        await this.#writer.close()
 			}
 			else if(ArrayBuffer.isView(body)) {
 				await this.#writer.write(body)
+        await this.#writer.close()
 			}
 		}
-
-		await this.#writer.close()
 	}
 }

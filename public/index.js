@@ -77,7 +77,7 @@ function handleWorkerConnectMessage(event) {
 			await handleRequest(message.method, message.uri, headers, body, response)
 
 			// await message.stream.writable.close()
-			await message.stream.readable.cancel('EOS')
+			// await message.stream.readable.cancel('EOS')
 		})
 		.catch(e => console.warn('error im http message', e))
 
@@ -99,6 +99,45 @@ function onContentLoaded() {
 				// worker should get device connect from here
 			})
 	})
+
+	//
+	const upload = document.querySelector('button[name="Upload"]')
+	upload?.addEventListener('click', async event => {
+		/** @type {Array<FileSystemFileHandle>} */
+		const files = await window.showOpenFilePicker({})
+		console.log('selected', files)
+
+		const root = await navigator.storage.getDirectory()
+		const webrootDir = await root.getDirectoryHandle('webroot', { create: true })
+
+		for(const file of files) {
+			const name = file.name // todo make safe name
+			const f = await file.getFile()
+			// f.stream
+			//console.log(await f.text())
+			const target = await webrootDir.getFileHandle(name, { create: true})
+			const writableTarget = await target.createWritable({ })
+
+			await f.stream().pipeTo(writableTarget)
+		}
+	})
+
+	//
+	Promise.resolve().then(async () => {
+		console.log('load webroot')
+
+		const root = await navigator.storage.getDirectory()
+		console.log('root', root)
+		const webrootDir = await root.getDirectoryHandle('webroot')
+		// webrootDir.getFileHandle(filename)
+		if(webrootDir === undefined) { return }
+		for await (const [key, value] of webrootDir.entries()) {
+			const name = key
+			const handle = value
+			console.log('webRoot existing file', name, handle);
+		}
+	})
+	.catch(e => console.warn('error in webRoot', e))
 }
 
 (document.readyState === 'loading') ?

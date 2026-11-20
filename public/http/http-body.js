@@ -31,6 +31,7 @@ export class HTTPBody {
 			parts.push(part)
 		}
 
+		// this.#readable.cancel('body read')
 		return new Blob(parts, { type: this.#mimetype })
 	}
 
